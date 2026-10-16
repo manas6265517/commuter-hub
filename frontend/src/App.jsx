@@ -19,7 +19,7 @@ function App() {
     e.preventDefault();
     const endpoint = isLoginView ? '/api/auth/login' : '/api/auth/signup';
     
-    fetch(`http://localhost:5000${endpoint}`, {
+    fetch(`https://commuter-hub.onrender.com${endpoint}`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(authForm)
@@ -47,7 +47,7 @@ function App() {
 
   // --- TRIP FUNCTIONS ---
   const fetchTrips = () => {
-    fetch('http://localhost:5000/api/trips')
+    fetch('https://commuter-hub.onrender.com/api/trips')
       .then(res => res.json())
       .then(data => setTrips(data))
       .catch(err => console.error("Error fetching data:", err));
@@ -61,7 +61,7 @@ function App() {
 
   const handleTripSubmit = (e) => {
     e.preventDefault();
-    fetch('http://localhost:5000/api/trips', {
+    fetch('https://commuter-hub.onrender.com/api/trips', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(formData)
@@ -73,7 +73,7 @@ function App() {
   };
 
   const handleDelete = (id) => {
-    fetch(`http://localhost:5000/api/trips/${id}`, { method: 'DELETE' })
+    fetch(`https://commuter-hub.onrender.com/api/trips/${id}`, { method: 'DELETE' })
     .then(() => fetchTrips());
   };
 
