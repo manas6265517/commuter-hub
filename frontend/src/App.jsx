@@ -26,6 +26,27 @@ function App() {
   const [messages, setMessages] = useState([]);
   const [messageForm, setMessageForm] = useState({ text: '', route: '' });
 
+  // Train Status State
+  const [trainStatusLoading, setTrainStatusLoading] = useState(false);
+  const [trainStatuses, setTrainStatuses] = useState([
+    { train: 'Janshatabdi Express', route: 'Raigarh → Raipur', status: 'On Time', delay: '0 mins', lastChecked: 'Just now' },
+    { train: 'Janshatabdi Express', route: 'Raipur → Raigarh', status: 'Delayed', delay: '15 mins', lastChecked: '5 mins ago' },
+    { train: 'Janshatabdi Express', route: 'Raigarh → Bilapur', status: 'On Time', delay: '0 mins', lastChecked: '10 mins ago' }
+  ]);
+
+  const handleRefreshStatus = () => {
+    setTrainStatusLoading(true);
+    setTimeout(() => {
+      setTrainStatuses(prev => prev.map(t => ({
+        ...t,
+        lastChecked: 'Just now',
+        status: Math.random() > 0.8 ? 'Delayed' : 'On Time'
+      })));
+      setTrainStatusLoading(false);
+      toast.success('Live train statuses updated!');
+    }, 1000);
+  };
+
   // --- AUTHENTICATION FUNCTIONS ---
   const handleAuthChange = (e) => setAuthForm({ ...authForm, [e.target.name]: e.target.value });
 
@@ -305,7 +326,11 @@ function App() {
           <button onClick={() => setActiveTab('community')} className={`px-4 md:px-6 py-2 rounded-full font-semibold transition-all duration-300 text-sm md:text-base ${activeTab === 'community' ? 'bg-emerald-600 text-white shadow-lg shadow-emerald-500/30' : 'bg-slate-800 text-slate-400 hover:text-white border border-slate-700 hover:border-slate-500'}`}>
             Community
           </button>
+          <button onClick={() => setActiveTab('status')} className={`px-4 md:px-5 py-2 rounded-full font-semibold transition-all duration-300 text-sm md:text-base ${activeTab === 'status' ? 'bg-purple-600 text-white shadow-lg shadow-purple-500/30' : 'bg-slate-800 text-slate-400 hover:text-white border border-slate-700 hover:border-slate-500'}`}>
+            Live Status
+          </button>
         </div>
+
 
         {/* --- VIEW: DASHBOARD --- */}
         {activeTab === 'dashboard' && (
@@ -515,6 +540,48 @@ function App() {
           </div>
         )}
       </div>
+
+      {/* --- VIEW: LIVE STATUS --- */}
+        {activeTab === 'status' && (
+          <div className="max-w-2xl mx-auto bg-slate-800 p-8 rounded-2xl shadow-xl border border-slate-700 mb-12">
+            <div className="flex justify-between items-center mb-6 border-b border-slate-700 pb-4">
+              <div>
+                <h2 className="text-2xl font-semibold text-purple-400 flex items-center gap-2">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="6" width="20" height="12" rx="2"/><path d="M6 18v2"/><path d="M18 18v2"/><path d="M2 10h20"/></svg>
+                  Train Running Status
+                </h2>
+                <p className="text-slate-400 text-sm mt-1">Real-time simulation feed for frequent commuter routes.</p>
+              </div>
+              <button 
+                onClick={handleRefreshStatus} 
+                disabled={trainStatusLoading}
+                className="bg-purple-600 hover:bg-purple-500 disabled:opacity-50 text-white px-4 py-2 rounded-lg transition-all text-sm font-semibold shadow-md flex items-center gap-2"
+              >
+                {trainStatusLoading ? 'Checking...' : 'Refresh Status'}
+              </button>
+            </div>
+
+            <div className="space-y-4">
+              {trainStatuses.map((item, idx) => (
+                <div key={idx} className="bg-slate-900 p-5 rounded-xl border border-slate-700 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                  <div>
+                    <h3 className="text-lg font-bold text-white">{item.train}</h3>
+                    <p className="text-sm text-slate-400 mt-0.5">{item.route}</p>
+                    <p className="text-xs text-slate-500 mt-1">Checked: {item.lastChecked}</p>
+                  </div>
+                  <div className="flex items-center gap-3 w-full md:w-auto justify-between md:justify-end">
+                    <div className="text-right">
+                      <span className={`inline-block px-3 py-1 rounded-full text-xs font-bold border ${item.status === 'On Time' ? 'bg-emerald-950 text-emerald-400 border-emerald-800' : 'bg-amber-950 text-amber-400 border-amber-800'}`}>
+                        {item.status}
+                      </span>
+                      {item.delay !== '0 mins' && <p className="text-xs text-amber-400 mt-1">Late by {item.delay}</p>}
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
 
       {/* --- FLOATING EDIT MODAL --- */}
       {editingTrip && (
