@@ -5,11 +5,12 @@ import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recha
 function App() {
   // Authentication State
   const [token, setToken] = useState(localStorage.getItem('token') || '');
+  const [userName, setUserName] = useState(localStorage.getItem('userName') || 'Fellow Commuter');
   const [isLoginView, setIsLoginView] = useState(true);
   const [authForm, setAuthForm] = useState({ name: '', email: '', password: '' });
 
   // App Navigation State
-  const [activeTab, setActiveTab] = useState('dashboard');
+  const [activeTab, setActiveTab] = useState('dashboard'); // 'dashboard', 'analytics', 'community'
 
   // Trip State
   const [trips, setTrips] = useState([]);
@@ -17,11 +18,13 @@ function App() {
     startStation: '', endStation: '', trainName: '', travelDate: '', ticketCost: ''
   });
   
-  // Edit State
+  // Edit & Search State
   const [editingTrip, setEditingTrip] = useState(null);
-
-  // Search State
   const [searchTerm, setSearchTerm] = useState('');
+
+  // Community State
+  const [messages, setMessages] = useState([]);
+  const [messageForm, setMessageForm] = useState({ text: '', route: '' });
 
   // --- AUTHENTICATION FUNCTIONS ---
   const handleAuthChange = (e) => setAuthForm({ ...authForm, [e.target.name]: e.target.value });
@@ -39,7 +42,9 @@ function App() {
     .then(data => {
       if (data.token) {
         localStorage.setItem('token', data.token);
+        localStorage.setItem('userName', data.user.name || 'Commuter');
         setToken(data.token);
+        setUserName(data.user.name || 'Commuter');
         toast.success('Successfully logged in!');
       } else if (data.message === 'User created successfully') {
         setIsLoginView(true);
@@ -56,8 +61,11 @@ function App() {
 
   const handleLogout = () => {
     localStorage.removeItem('token');
+    localStorage.removeItem('userName');
     setToken('');
+    setUserName('');
     setTrips([]);
+    setMessages([]);
     toast.success('Logged out successfully!');
   };
 
@@ -66,7 +74,7 @@ function App() {
     fetch('https://commuter-hub.onrender.com/api/trips')
       .then(res => res.json())
       .then(data => setTrips(data))
-      .catch(err => console.error("Error fetching data:", err));
+      .catch(err => console.error("Error fetching trips:", err));
   };
 
   useEffect(() => {
@@ -99,68 +107,73 @@ function App() {
     .catch(() => toast.error('Failed to delete trip.'));
   };
 
-  // --- EDIT FUNCTIONS ---
-  const handleEditChange = (e) => {
-    setEditingTrip({ ...editingTrip, [e.target.name]: e.target.value });
-  };
+  const handleEditChange = (e) => setEditingTrip({ ...editingTrip, [e.target.name]: e.target.value });
 
   const handleEditSubmit = (e) => {
     e.preventDefault();
-    fetch(`https://commuter-hub.onrender.com/api/trips/${editingTrip._id}`, {
+    const { _id, __v, user, ...updateData } = editingTrip;
+
+    fetch(`https://commuter-hub.onrender.com/api/trips/${_id}`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(editingTrip)
+      body: JSON.stringify(updateData)
+    })
+    .then(async (res) => {
+      if (!res.ok) {
+        const errorData = await res.json();
+        throw new Error(errorData.message || `Server rejected with status ${res.status}`);
+      }
+      return res.json();
     })
     .then(() => {
       fetchTrips();
       setEditingTrip(null);
       toast.success('Trip updated successfully!');
     })
-    .catch(() => toast.error('Failed to update trip.'));
+    .catch((err) => toast.error(`Update failed: ${err.message}`));
   };
 
-  const handleExportCSV = () => {
-    if (filteredTrips.length === 0) {
-      toast.error("No trips to export!");
-      return;
+  // --- COMMUNITY FUNCTIONS ---
+  const fetchMessages = () => {
+    fetch('https://commuter-hub.onrender.com/api/messages')
+      .then(res => res.json())
+      .then(data => setMessages(data))
+      .catch(err => console.error("Error fetching messages:", err));
+  };
+
+  useEffect(() => {
+    if (token && activeTab === 'community') {
+      fetchMessages();
+      // Optional: Set up a basic poll to refresh messages every 15 seconds
+      const interval = setInterval(fetchMessages, 15000);
+      return () => clearInterval(interval);
     }
+  }, [token, activeTab]);
 
-    // 1. Create CSV Headers
-    const headers = ['Date', 'Start Station', 'End Station', 'Train Name', 'Ticket Cost (INR)'];
+  const handleMessageChange = (e) => setMessageForm({ ...messageForm, [e.target.name]: e.target.value });
 
-    // 2. Map the data into CSV rows
-    const csvRows = filteredTrips.map(trip => {
-      const date = new Date(trip.travelDate).toLocaleDateString();
-      // Wrap strings in quotes to handle any accidental commas in names
-      return `"${date}","${trip.startStation}","${trip.endStation}","${trip.trainName}","${trip.ticketCost}"`;
-    });
-
-    // 3. Combine headers and rows
-    const csvContent = [headers.join(','), ...csvRows].join('\n');
-
-    // 4. Create a Blob and trigger the download
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.setAttribute('download', 'Commuter_Hub_Expense_Report.csv');
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    URL.revokeObjectURL(url);
-    
-    toast.success('Expense report downloaded!');
+  const handleMessageSubmit = (e) => {
+    e.preventDefault();
+    fetch('https://commuter-hub.onrender.com/api/messages', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        user: userName,
+        text: messageForm.text,
+        route: messageForm.route
+      })
+    })
+    .then(() => {
+      fetchMessages();
+      setMessageForm({ ...messageForm, text: '' }); // Clear text, keep route
+      toast.success('Message posted!');
+    })
+    .catch(() => toast.error('Failed to post message.'));
   };
 
   // --- HELPER FUNCTIONS ---
   const handleQuickFill = (start, end, train, cost) => {
-    setFormData({
-      ...formData,
-      startStation: start,
-      endStation: end,
-      trainName: train,
-      ticketCost: cost
-    });
+    setFormData({ ...formData, startStation: start, endStation: end, trainName: train, ticketCost: cost });
     toast.success(`Auto-filled: ${start} → ${end}`);
   };
 
@@ -178,14 +191,7 @@ function App() {
   };
 
   const dynamicRoutes = getDynamicRoutes();
-
-  const handleSwapStations = () => {
-    setFormData({
-      ...formData,
-      startStation: formData.endStation,
-      endStation: formData.startStation
-    });
-  };
+  const handleSwapStations = () => setFormData({ ...formData, startStation: formData.endStation, endStation: formData.startStation });
 
   const filteredTrips = trips.filter(trip => 
     trip.startStation.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -202,15 +208,34 @@ function App() {
       monthlyTotals[monthYear] = (monthlyTotals[monthYear] || 0) + Number(trip.ticketCost || 0);
     });
     return Object.keys(monthlyTotals)
-      .map(month => ({
-        name: month,
-        total: monthlyTotals[month],
-        rawDate: new Date(month)
-      }))
+      .map(month => ({ name: month, total: monthlyTotals[month], rawDate: new Date(month) }))
       .sort((a, b) => a.rawDate - b.rawDate);
   };
 
   const chartData = getMonthlyData();
+
+  const handleExportCSV = () => {
+    if (filteredTrips.length === 0) {
+      toast.error("No trips to export!");
+      return;
+    }
+    const headers = ['Date', 'Start Station', 'End Station', 'Train Name', 'Ticket Cost (INR)'];
+    const csvRows = filteredTrips.map(trip => {
+      const date = new Date(trip.travelDate).toLocaleDateString();
+      return `"${date}","${trip.startStation}","${trip.endStation}","${trip.trainName}","${trip.ticketCost}"`;
+    });
+    const csvContent = [headers.join(','), ...csvRows].join('\n');
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.setAttribute('download', 'Commuter_Hub_Expense_Report.csv');
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+    toast.success('Expense report downloaded!');
+  };
 
   // --- RENDER LOGIN/SIGNUP SCREEN ---
   if (!token) {
@@ -222,7 +247,6 @@ function App() {
             Commuter Hub 🚆
           </h1>
           <h2 className="text-xl text-white text-center mb-6">{isLoginView ? 'Welcome Back' : 'Create an Account'}</h2>
-          
           <form onSubmit={handleAuthSubmit} className="space-y-4">
             {!isLoginView && (
               <input type="text" name="name" value={authForm.name} onChange={handleAuthChange} placeholder="Full Name" required className="w-full bg-slate-900 border border-slate-600 rounded-lg p-3 text-white focus:ring-2 focus:ring-blue-500"/>
@@ -233,7 +257,6 @@ function App() {
               {isLoginView ? 'Login' : 'Sign Up'}
             </button>
           </form>
-          
           <p className="text-slate-400 text-center mt-6 text-sm">
             {isLoginView ? "Don't have an account? " : "Already have an account? "}
             <button onClick={() => setIsLoginView(!isLoginView)} className="text-blue-400 hover:text-blue-300 font-semibold underline">
@@ -262,18 +285,15 @@ function App() {
         </div> 
 
         {/* Navigation Tabs */}
-        <div className="flex justify-center gap-4 mb-10">
-          <button 
-            onClick={() => setActiveTab('dashboard')} 
-            className={`px-6 py-2 rounded-full font-semibold transition-all duration-300 ${activeTab === 'dashboard' ? 'bg-blue-600 text-white shadow-lg shadow-blue-500/30' : 'bg-slate-800 text-slate-400 hover:text-white border border-slate-700 hover:border-slate-500'}`}
-          >
+        <div className="flex flex-wrap justify-center gap-2 md:gap-4 mb-10">
+          <button onClick={() => setActiveTab('dashboard')} className={`px-4 md:px-6 py-2 rounded-full font-semibold transition-all duration-300 text-sm md:text-base ${activeTab === 'dashboard' ? 'bg-blue-600 text-white shadow-lg shadow-blue-500/30' : 'bg-slate-800 text-slate-400 hover:text-white border border-slate-700 hover:border-slate-500'}`}>
             Dashboard
           </button>
-          <button 
-            onClick={() => setActiveTab('analytics')} 
-            className={`px-6 py-2 rounded-full font-semibold transition-all duration-300 ${activeTab === 'analytics' ? 'bg-blue-600 text-white shadow-lg shadow-blue-500/30' : 'bg-slate-800 text-slate-400 hover:text-white border border-slate-700 hover:border-slate-500'}`}
-          >
+          <button onClick={() => setActiveTab('analytics')} className={`px-4 md:px-6 py-2 rounded-full font-semibold transition-all duration-300 text-sm md:text-base ${activeTab === 'analytics' ? 'bg-blue-600 text-white shadow-lg shadow-blue-500/30' : 'bg-slate-800 text-slate-400 hover:text-white border border-slate-700 hover:border-slate-500'}`}>
             Analytics
+          </button>
+          <button onClick={() => setActiveTab('community')} className={`px-4 md:px-6 py-2 rounded-full font-semibold transition-all duration-300 text-sm md:text-base ${activeTab === 'community' ? 'bg-emerald-600 text-white shadow-lg shadow-emerald-500/30' : 'bg-slate-800 text-slate-400 hover:text-white border border-slate-700 hover:border-slate-500'}`}>
+            Community
           </button>
         </div>
 
@@ -337,27 +357,12 @@ function App() {
               <h2 className="text-3xl font-bold text-slate-200 mb-4 md:mb-0">My Travel History</h2>
               
               <div className="flex gap-3 w-full md:w-auto">
-                {/* Search Bar */}
                 <div className="relative w-full md:w-64">
-                  <input 
-                    type="text" 
-                    placeholder="Search trips..." 
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                    className="w-full bg-slate-800 border border-slate-600 rounded-lg py-2 pl-10 pr-4 text-white focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
-                  />
-                  <svg className="absolute left-3 top-2.5 h-4 w-4 text-slate-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                    <circle cx="11" cy="11" r="8"></circle>
-                    <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
-                  </svg>
+                  <input type="text" placeholder="Search trips..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="w-full bg-slate-800 border border-slate-600 rounded-lg py-2 pl-10 pr-4 text-white focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"/>
+                  <svg className="absolute left-3 top-2.5 h-4 w-4 text-slate-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
                 </div>
                 
-                {/* Export Button */}
-                <button 
-                  onClick={handleExportCSV} 
-                  className="bg-emerald-600 hover:bg-emerald-500 text-white px-4 py-2 rounded-lg transition-all text-sm font-semibold shadow-md whitespace-nowrap flex items-center gap-2"
-                  title="Download as CSV"
-                >
+                <button onClick={handleExportCSV} className="bg-emerald-600 hover:bg-emerald-500 text-white px-4 py-2 rounded-lg transition-all text-sm font-semibold shadow-md whitespace-nowrap flex items-center gap-2" title="Download as CSV">
                   <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
                   Export
                 </button>
@@ -365,9 +370,7 @@ function App() {
             </div>
             
             {filteredTrips.length === 0 ? (
-              <p className="text-center text-slate-400 text-lg">
-                {trips.length === 0 ? "No trips logged yet." : "No trips match your search."}
-              </p>
+              <p className="text-center text-slate-400 text-lg">{trips.length === 0 ? "No trips logged yet." : "No trips match your search."}</p>
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 {filteredTrips.map((trip) => (
@@ -405,17 +408,75 @@ function App() {
                   <BarChart data={chartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
                     <XAxis dataKey="name" stroke="#94a3b8" fontSize={14} tickLine={false} axisLine={false} />
                     <YAxis stroke="#94a3b8" fontSize={14} tickLine={false} axisLine={false} tickFormatter={(value) => `₹${value}`} />
-                    <Tooltip 
-                      cursor={{ fill: '#334155' }}
-                      contentStyle={{ backgroundColor: '#1e293b', border: '1px solid #334155', borderRadius: '8px', color: '#f8fafc' }}
-                      itemStyle={{ color: '#34d399', fontWeight: 'bold' }}
-                      formatter={(value) => [`₹${value}`, 'Total Spent']}
-                    />
+                    <Tooltip cursor={{ fill: '#334155' }} contentStyle={{ backgroundColor: '#1e293b', border: '1px solid #334155', borderRadius: '8px', color: '#f8fafc' }} itemStyle={{ color: '#34d399', fontWeight: 'bold' }} formatter={(value) => [`₹${value}`, 'Total Spent']} />
                     <Bar dataKey="total" fill="#3b82f6" radius={[6, 6, 0, 0]} />
                   </BarChart>
                 </ResponsiveContainer>
               </div>
             )}
+          </div>
+        )}
+
+        {/* --- VIEW: COMMUNITY BOARD --- */}
+        {activeTab === 'community' && (
+          <div className="max-w-2xl mx-auto">
+            <div className="bg-slate-800 p-6 rounded-2xl shadow-xl border border-slate-700 mb-8">
+              <h2 className="text-2xl font-semibold text-emerald-400 mb-2 flex items-center gap-2">
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
+                Commuter Feed
+              </h2>
+              <p className="text-slate-400 text-sm mb-6">Coordinate shared rides or share travel updates with others.</p>
+              
+              <form onSubmit={handleMessageSubmit} className="space-y-4">
+                <input 
+                  type="text" 
+                  name="route" 
+                  value={messageForm.route} 
+                  onChange={handleMessageChange} 
+                  placeholder="Your Route (e.g., Raigarh to Raipur)" 
+                  required 
+                  className="w-full bg-slate-900 border border-slate-600 rounded-lg p-3 text-white focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                />
+                <textarea 
+                  name="text" 
+                  value={messageForm.text} 
+                  onChange={handleMessageChange} 
+                  placeholder="Anyone want to split an auto from the station tonight?" 
+                  required 
+                  rows="3"
+                  className="w-full bg-slate-900 border border-slate-600 rounded-lg p-3 text-white focus:outline-none focus:ring-2 focus:ring-emerald-500 resize-none"
+                ></textarea>
+                <button type="submit" className="bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-2 px-6 rounded-lg shadow-lg hover:shadow-emerald-500/30 transition-all">
+                  Post Message
+                </button>
+              </form>
+            </div>
+
+            <div className="space-y-4">
+              {messages.length === 0 ? (
+                <p className="text-center text-slate-500 py-8 border border-dashed border-slate-700 rounded-xl">No messages yet. Be the first to post!</p>
+              ) : (
+                messages.map(msg => (
+                  <div key={msg._id} className="bg-slate-800/80 p-5 rounded-xl border border-slate-700 shadow-md">
+                    <div className="flex justify-between items-start mb-3">
+                      <div className="flex items-center gap-3">
+                        <div className="h-10 w-10 bg-emerald-900 text-emerald-400 rounded-full flex items-center justify-center font-bold text-lg border border-emerald-700">
+                          {msg.user ? msg.user.charAt(0).toUpperCase() : '?'}
+                        </div>
+                        <div>
+                          <p className="font-semibold text-slate-200">{msg.user || 'Anonymous'}</p>
+                          <p className="text-xs text-slate-500">{new Date(msg.createdAt).toLocaleString()}</p>
+                        </div>
+                      </div>
+                      <span className="bg-slate-900 text-blue-400 text-xs font-medium px-3 py-1 rounded-full border border-slate-700">
+                        {msg.route}
+                      </span>
+                    </div>
+                    <p className="text-slate-300 ml-13 leading-relaxed pl-1">{msg.text}</p>
+                  </div>
+                ))
+              )}
+            </div>
           </div>
         )}
       </div>
@@ -432,22 +493,17 @@ function App() {
               </div>
               <input type="text" name="trainName" value={editingTrip.trainName} onChange={handleEditChange} placeholder="Train Name" required className="w-full bg-slate-900 border border-slate-600 rounded-lg p-3 text-white focus:outline-none focus:ring-2 focus:ring-blue-500"/>
               <div className="grid grid-cols-2 gap-4">
-                <input type="date" name="travelDate" value={editingTrip.travelDate.split('T')[0]} onChange={handleEditChange} required className="w-full bg-slate-900 border border-slate-600 rounded-lg p-3 text-white focus:outline-none focus:ring-2 focus:ring-blue-500"/>
+                <input type="date" name="travelDate" value={editingTrip.travelDate ? editingTrip.travelDate.split('T')[0] : ''} onChange={handleEditChange} required className="w-full bg-slate-900 border border-slate-600 rounded-lg p-3 text-white focus:outline-none focus:ring-2 focus:ring-blue-500"/>
                 <input type="number" name="ticketCost" value={editingTrip.ticketCost} onChange={handleEditChange} placeholder="Cost (₹)" required className="w-full bg-slate-900 border border-slate-600 rounded-lg p-3 text-white focus:outline-none focus:ring-2 focus:ring-blue-500"/>
               </div>
               <div className="flex gap-4 mt-6">
-                <button type="button" onClick={() => setEditingTrip(null)} className="w-1/2 bg-slate-700 hover:bg-slate-600 text-white font-semibold py-3 rounded-lg transition-all">
-                  Cancel
-                </button>
-                <button type="submit" className="w-1/2 bg-blue-600 hover:bg-blue-500 text-white font-bold py-3 rounded-lg shadow-lg shadow-blue-500/30 transition-all">
-                  Save Changes
-                </button>
+                <button type="button" onClick={() => setEditingTrip(null)} className="w-1/2 bg-slate-700 hover:bg-slate-600 text-white font-semibold py-3 rounded-lg transition-all">Cancel</button>
+                <button type="submit" className="w-1/2 bg-blue-600 hover:bg-blue-500 text-white font-bold py-3 rounded-lg shadow-lg shadow-blue-500/30 transition-all">Save Changes</button>
               </div>
             </form>
           </div>
         </div>
       )}
-
     </div>
   );
 }
