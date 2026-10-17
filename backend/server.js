@@ -7,6 +7,7 @@ const mongoose = require('mongoose');
 const cors = require('cors');
 
 // Import your route files
+const ticketRoutes = require('./routes/ticketRoutes');
 const statusRoutes = require('./routes/statusRoutes');
 const tripRoutes = require('./routes/tripRoutes');
 const authRoutes = require('./routes/authRoutes'); 
@@ -26,6 +27,7 @@ mongoose.connect(process.env.MONGO_URI)
 app.set('io', io);
 
 // Use the routes
+app.use('/api/tickets', ticketRoutes);
 app.use('/api/status', statusRoutes);
 app.use('/api/trips', tripRoutes);
 app.use('/api/auth', authRoutes); 
