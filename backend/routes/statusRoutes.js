@@ -7,8 +7,12 @@ const cheerio = require('cheerio');
 router.get('/', async (req, res) => {
     // These are the actual train numbers for the Janshatabdi on your route
     const trains = [
-        { trainNo: '12069', name: 'Janshatabdi Express', route: 'Raigarh → Raipur' },
-        { trainNo: '12070', name: 'Janshatabdi Express', route: 'Raipur → Raigarh' }
+        { trainNo: '20825', name: 'Vande Bharat Express', route: 'Raigarh → Raipur' },
+        { trainNo: '12070', name: 'Janshatabdi Express', route: 'Raipur → Raigarh' },
+        { trainNo: '12441', name: 'Rajdhani Express', route: 'Raipur → Nagpur' },
+        { trainNo: '12261', name: 'Duranto Express', route: 'CSMT → Howrah' },
+        { trainNo: '15906', name: 'Vivek Express', route: 'Dibrugarh → Kanyakumari' },
+        { trainNo: '12275', name: 'Humsafar Express', route: 'Prayagraj → New Delhi' }
     ];
 
     try {
