@@ -441,7 +441,7 @@ function App() {
               <div className="mb-4">
                 <p className="text-slate-400 text-xs uppercase tracking-wider mb-2 font-semibold">Quick Select Route:</p>
                 <div className="flex flex-wrap gap-2">
-                  {['Raigarh to Raipur', 'Raipur to Raigarh', 'Raigarh to Bhatapara'].map((presetRoute, idx) => (
+                  {['Raigarh to Raipur', 'Raipur to Raigarh', 'Raigarh to Bilapsur'].map((presetRoute, idx) => (
                     <button
                       key={idx}
                       type="button"
