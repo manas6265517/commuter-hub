@@ -10,6 +10,10 @@ function App() {
   const [isLoginView, setIsLoginView] = useState(true);
   const [authForm, setAuthForm] = useState({ name: '', email: '', password: '' });
 
+  const [ticketFile, setTicketFile] = useState(null);
+  const [isParsing, setIsParsing] = useState(false);
+  const [parsedTicket, setParsedTicket] = useState(null);
+
   // App Navigation State
   const [activeTab, setActiveTab] = useState('dashboard'); // 'dashboard', 'analytics', 'community'
 
@@ -201,6 +205,35 @@ function App() {
       };
     }
   }, [token, activeTab]);
+
+  const handleTicketUpload = async (e) => {
+  e.preventDefault();
+  if (!ticketFile) return toast.error("Please select an image first!");
+  
+  setIsParsing(true);
+  const formData = new FormData();
+  formData.append('ticketImage', ticketFile);
+
+  try {
+    const response = await fetch('https://commuter-hub.onrender.com/api/tickets/parse', {
+      method: 'POST',
+      body: formData,
+    });
+    
+    const data = await response.json();
+    if (response.ok) {
+      setParsedTicket(data);
+      toast.success("Ticket successfully parsed by AI!");
+    } else {
+      toast.error(data.message || "Failed to parse ticket.");
+    }
+  } catch (error) {
+    console.error(error);
+    toast.error("Error connecting to the AI server.");
+  } finally {
+    setIsParsing(false);
+  }
+};
 
   const handleMessageChange = (e) => setMessageForm({ ...messageForm, [e.target.name]: e.target.value });
 
@@ -483,6 +516,46 @@ function App() {
           </div>
         )}
 
+        {/* AI TICKET SCANNER */}
+<div className="bg-slate-800 p-6 rounded-2xl shadow-xl border border-slate-700 mb-8 max-w-2xl mx-auto">
+  <h2 className="text-2xl font-semibold text-emerald-400 mb-2 flex items-center gap-2">
+    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><circle cx="8.5" cy="8.5" r="1.5"></circle><polyline points="21 15 16 10 5 21"></polyline></svg>
+    Smart Ticket Logger
+  </h2>
+  <p className="text-slate-400 text-sm mb-6">Upload a screenshot of your IRCTC ticket. Our AI will extract the PNR, train details, and seat number automatically.</p>
+
+  <form onSubmit={handleTicketUpload} className="space-y-4">
+    <input 
+      type="file" 
+      accept="image/*"
+      onChange={(e) => setTicketFile(e.target.files[0])}
+      className="w-full text-slate-300 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-emerald-900 file:text-emerald-400 hover:file:bg-emerald-800 transition-all border border-slate-600 bg-slate-900 rounded-lg p-2"
+    />
+    <button 
+      type="submit" 
+      disabled={isParsing}
+      className="bg-emerald-600 hover:bg-emerald-500 disabled:bg-slate-600 text-white font-bold py-2 px-6 rounded-lg shadow-lg hover:shadow-emerald-500/30 transition-all w-full md:w-auto"
+    >
+      {isParsing ? 'Analyzing image...' : 'Extract Details'}
+    </button>
+  </form>
+
+  {/* Display the structured data returned from the AI */}
+  {parsedTicket && (
+    <div className="mt-6 bg-slate-900 p-4 rounded-xl border border-emerald-500/40">
+      <h3 className="text-emerald-400 font-semibold mb-3 text-sm uppercase tracking-wider">Extracted Data</h3>
+      <div className="grid grid-cols-2 gap-4">
+        <div><span className="text-slate-500 text-xs">PNR</span><p className="text-slate-200 font-medium">{parsedTicket.pnr}</p></div>
+        <div><span className="text-slate-500 text-xs">Train</span><p className="text-slate-200 font-medium">{parsedTicket.trainName}</p></div>
+        <div><span className="text-slate-500 text-xs">Date</span><p className="text-slate-200 font-medium">{parsedTicket.date}</p></div>
+        <div><span className="text-slate-500 text-xs">Seat</span><p className="text-slate-200 font-medium">{parsedTicket.seat}</p></div>
+        <div><span className="text-slate-500 text-xs">From</span><p className="text-slate-200 font-medium">{parsedTicket.source}</p></div>
+        <div><span className="text-slate-500 text-xs">To</span><p className="text-slate-200 font-medium">{parsedTicket.destination}</p></div>
+      </div>
+    </div>
+  )}
+</div>
+
         {/* --- VIEW: COMMUNITY BOARD --- */}
         {activeTab === 'community' && (
           <div className="max-w-2xl mx-auto">
@@ -542,12 +615,14 @@ function App() {
                 messages.map(msg => (
                   <div key={msg._id} className="bg-slate-800/80 p-5 rounded-xl border border-slate-700 shadow-md relative group">
                     
-                    {/* NEW: Conditional Trash Icon for the logged-in user */}
-                    {msg.user === userName && (
-                      <button onClick={() => handleDeleteMessage(msg._id)} className="absolute top-4 right-4 text-slate-500 hover:text-red-400 bg-slate-900 hover:bg-red-500/10 p-1.5 rounded-md transition-all opacity-0 group-hover:opacity-100" title="Delete message">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 6h18"></path><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"></path><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"></path></svg>
-                      </button>
-                    )}
+                    {/* DUSTBIN - Visible only on hover */}
+                    <button 
+                      onClick={() => handleDeleteMessage(msg._id)} 
+                      className="absolute top-4 right-4 text-red-400 bg-slate-900 hover:bg-red-500/20 p-1.5 rounded-md transition-all opacity-0 group-hover:opacity-100" 
+                      title="Delete message"
+                    >
+                      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 6h18"></path><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"></path><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"></path></svg>
+                    </button>
 
                     <div className="flex justify-between items-start mb-3 pr-8">
                       <div className="flex items-center gap-3">
