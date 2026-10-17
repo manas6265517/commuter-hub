@@ -215,7 +215,7 @@ function App() {
   formData.append('ticketImage', ticketFile);
 
   try {
-    const response = await fetch('https://commuter-hub.onrender.com/api/tickets/parse', {
+    const response = await fetch('http://localhost:5000/api/tickets/parse', {
       method: 'POST',
       body: formData,
     });
@@ -412,6 +412,45 @@ function App() {
               </div>
             </div>
 
+            {/* AI TICKET SCANNER */}
+<div className="bg-slate-800 p-6 rounded-2xl shadow-xl border border-slate-700 mb-8 max-w-2xl mx-auto">
+  <h2 className="text-2xl font-semibold text-emerald-400 mb-2 flex items-center gap-2">
+    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><circle cx="8.5" cy="8.5" r="1.5"></circle><polyline points="21 15 16 10 5 21"></polyline></svg>
+    Smart Ticket Logger
+  </h2>
+  <p className="text-slate-400 text-sm mb-6">Upload a screenshot of your IRCTC ticket. Our AI will extract the PNR, train details, and seat number automatically.</p>
+
+  <form onSubmit={handleTicketUpload} className="space-y-4">
+    <input 
+      type="file" 
+      accept="image/*"
+      onChange={(e) => setTicketFile(e.target.files[0])}
+      className="w-full text-slate-300 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-emerald-900 file:text-emerald-400 hover:file:bg-emerald-800 transition-all border border-slate-600 bg-slate-900 rounded-lg p-2"
+    />
+    <button 
+      type="submit" 
+      disabled={isParsing}
+      className="bg-emerald-600 hover:bg-emerald-500 disabled:bg-slate-600 text-white font-bold py-2 px-6 rounded-lg shadow-lg hover:shadow-emerald-500/30 transition-all w-full md:w-auto"
+    >
+      {isParsing ? 'Analyzing image...' : 'Extract Details'}
+    </button>
+  </form>
+
+  {/* Display the structured data returned from the AI */}
+  {parsedTicket && (
+    <div className="mt-6 bg-slate-900 p-4 rounded-xl border border-emerald-500/40">
+      <h3 className="text-emerald-400 font-semibold mb-3 text-sm uppercase tracking-wider">Extracted Data</h3>
+      <div className="grid grid-cols-2 gap-4">
+        <div><span className="text-slate-500 text-xs">PNR</span><p className="text-slate-200 font-medium">{parsedTicket.pnr}</p></div>
+        <div><span className="text-slate-500 text-xs">Train</span><p className="text-slate-200 font-medium">{parsedTicket.trainName}</p></div>
+        <div><span className="text-slate-500 text-xs">Date</span><p className="text-slate-200 font-medium">{parsedTicket.date}</p></div>
+        <div><span className="text-slate-500 text-xs">Seat</span><p className="text-slate-200 font-medium">{parsedTicket.seat}</p></div>
+        <div><span className="text-slate-500 text-xs">From</span><p className="text-slate-200 font-medium">{parsedTicket.source}</p></div>
+        <div><span className="text-slate-500 text-xs">To</span><p className="text-slate-200 font-medium">{parsedTicket.destination}</p></div>
+      </div>
+    </div>
+  )}
+</div>
             <div className="max-w-xl mx-auto bg-slate-800 p-8 rounded-2xl shadow-xl border border-slate-700 mb-12">
               <h2 className="text-2xl font-semibold text-white mb-4 text-center">Log a New Trip</h2>
               
@@ -515,46 +554,6 @@ function App() {
             )}
           </div>
         )}
-
-        {/* AI TICKET SCANNER */}
-<div className="bg-slate-800 p-6 rounded-2xl shadow-xl border border-slate-700 mb-8 max-w-2xl mx-auto">
-  <h2 className="text-2xl font-semibold text-emerald-400 mb-2 flex items-center gap-2">
-    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><circle cx="8.5" cy="8.5" r="1.5"></circle><polyline points="21 15 16 10 5 21"></polyline></svg>
-    Smart Ticket Logger
-  </h2>
-  <p className="text-slate-400 text-sm mb-6">Upload a screenshot of your IRCTC ticket. Our AI will extract the PNR, train details, and seat number automatically.</p>
-
-  <form onSubmit={handleTicketUpload} className="space-y-4">
-    <input 
-      type="file" 
-      accept="image/*"
-      onChange={(e) => setTicketFile(e.target.files[0])}
-      className="w-full text-slate-300 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-emerald-900 file:text-emerald-400 hover:file:bg-emerald-800 transition-all border border-slate-600 bg-slate-900 rounded-lg p-2"
-    />
-    <button 
-      type="submit" 
-      disabled={isParsing}
-      className="bg-emerald-600 hover:bg-emerald-500 disabled:bg-slate-600 text-white font-bold py-2 px-6 rounded-lg shadow-lg hover:shadow-emerald-500/30 transition-all w-full md:w-auto"
-    >
-      {isParsing ? 'Analyzing image...' : 'Extract Details'}
-    </button>
-  </form>
-
-  {/* Display the structured data returned from the AI */}
-  {parsedTicket && (
-    <div className="mt-6 bg-slate-900 p-4 rounded-xl border border-emerald-500/40">
-      <h3 className="text-emerald-400 font-semibold mb-3 text-sm uppercase tracking-wider">Extracted Data</h3>
-      <div className="grid grid-cols-2 gap-4">
-        <div><span className="text-slate-500 text-xs">PNR</span><p className="text-slate-200 font-medium">{parsedTicket.pnr}</p></div>
-        <div><span className="text-slate-500 text-xs">Train</span><p className="text-slate-200 font-medium">{parsedTicket.trainName}</p></div>
-        <div><span className="text-slate-500 text-xs">Date</span><p className="text-slate-200 font-medium">{parsedTicket.date}</p></div>
-        <div><span className="text-slate-500 text-xs">Seat</span><p className="text-slate-200 font-medium">{parsedTicket.seat}</p></div>
-        <div><span className="text-slate-500 text-xs">From</span><p className="text-slate-200 font-medium">{parsedTicket.source}</p></div>
-        <div><span className="text-slate-500 text-xs">To</span><p className="text-slate-200 font-medium">{parsedTicket.destination}</p></div>
-      </div>
-    </div>
-  )}
-</div>
 
         {/* --- VIEW: COMMUNITY BOARD --- */}
         {activeTab === 'community' && (
