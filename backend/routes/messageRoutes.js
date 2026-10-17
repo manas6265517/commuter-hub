@@ -15,12 +15,15 @@ router.get('/', async (req, res) => {
 // POST a new message
 router.post('/', async (req, res) => {
     try {
-        const { user, text, route } = req.body;
-        const newMessage = new Message({ user, text, route });
+        const newMessage = new Message(req.body);
         const savedMessage = await newMessage.save();
+        
+        // Emit the new message event
+        req.app.get('io').emit('newMessage', savedMessage);
+        
         res.status(201).json(savedMessage);
     } catch (error) {
-        res.status(400).json({ message: 'Error posting message', error: error.message });
+        res.status(500).json({ message: 'Error posting message', error: error.message });
     }
 });
 
@@ -31,6 +34,10 @@ router.delete('/:id', async (req, res) => {
         if (!deletedMessage) {
             return res.status(404).json({ message: 'Message not found' });
         }
+        
+        // Emit the delete event
+        req.app.get('io').emit('messageDeleted', req.params.id);
+        
         res.status(200).json({ message: 'Message deleted successfully' });
     } catch (error) {
         res.status(500).json({ message: 'Error deleting message', error: error.message });
