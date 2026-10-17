@@ -47,4 +47,23 @@ router.delete('/:id', async (req, res) => {
     }
 });
 
+// 4. UPDATE A TRIP: Edit an existing trip by its ID
+router.put('/:id', async (req, res) => {
+    try {
+        const updatedTrip = await Trip.findByIdAndUpdate(
+            req.params.id, 
+            req.body, 
+            { new: true } // This tells Mongoose to return the updated document
+        );
+        
+        if (!updatedTrip) {
+            return res.status(404).json({ message: 'Trip not found' });
+        }
+        
+        res.status(200).json(updatedTrip);
+    } catch (error) {
+        res.status(500).json({ message: 'Error updating trip', error: error.message });
+    }
+});
+
 module.exports = router;
