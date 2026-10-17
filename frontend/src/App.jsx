@@ -584,7 +584,11 @@ function App() {
                       <span className={`inline-block px-3 py-1 rounded-full text-xs font-bold border ${item.status === 'On Time' ? 'bg-emerald-950 text-emerald-400 border-emerald-800' : 'bg-amber-950 text-amber-400 border-amber-800'}`}>
                         {item.status}
                       </span>
-                      {item.delay !== '0 mins' && <p className="text-xs text-amber-400 mt-1">Late by {item.delay}</p>}
+                      {item.delay !== '0 mins' && (
+                           <p className="text-xs text-amber-400 mt-1">
+                             {item.status === 'Server Blocked' ? item.delay : `Late by ${item.delay}`}
+                           </p>
+                          )}
                     </div>
                   </div>
                 </div>
