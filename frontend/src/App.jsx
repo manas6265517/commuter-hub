@@ -1,3 +1,4 @@
+import { io } from 'socket.io-client';
 import toast, { Toaster } from 'react-hot-toast';
 import { useState, useEffect } from 'react';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
@@ -11,6 +12,9 @@ function App() {
 
   // App Navigation State
   const [activeTab, setActiveTab] = useState('dashboard'); // 'dashboard', 'analytics', 'community'
+
+  // Socket State
+  const [socket, setSocket] = useState(null);
 
   // Trip State
   const [trips, setTrips] = useState([]);
@@ -174,10 +178,27 @@ function App() {
 
   useEffect(() => {
     if (token && activeTab === 'community') {
+      // 1. Fetch initial messages
       fetchMessages();
-      // Optional: Set up a basic poll to refresh messages every 15 seconds
-      const interval = setInterval(fetchMessages, 15000);
-      return () => clearInterval(interval);
+
+      // 2. Initialize Socket Connection
+      const newSocket = io('https://commuter-hub.onrender.com');
+      setSocket(newSocket);
+
+      // 3. Listen for new messages
+      newSocket.on('newMessage', (message) => {
+        setMessages((prevMessages) => [message, ...prevMessages]);
+      });
+
+      // 4. Listen for deleted messages
+      newSocket.on('messageDeleted', (deletedId) => {
+        setMessages((prevMessages) => prevMessages.filter(msg => msg._id !== deletedId));
+      });
+
+      // 5. Cleanup on unmount or tab change
+      return () => {
+        newSocket.disconnect();
+      };
     }
   }, [token, activeTab]);
 
