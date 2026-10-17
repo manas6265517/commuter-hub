@@ -171,6 +171,16 @@ function App() {
     .catch(() => toast.error('Failed to post message.'));
   };
 
+  const handleDeleteMessage = (id) => {
+    fetch(`https://commuter-hub.onrender.com/api/messages/${id}`, { method: 'DELETE' })
+    .then(async (res) => {
+      if (!res.ok) throw new Error('Failed to delete');
+      fetchMessages();
+      toast.success('Message deleted!');
+    })
+    .catch(() => toast.error('Failed to delete message.'));
+  };
+
   // --- HELPER FUNCTIONS ---
   const handleQuickFill = (start, end, train, cost) => {
     setFormData({ ...formData, startStation: start, endStation: end, trainName: train, ticketCost: cost });
@@ -457,8 +467,16 @@ function App() {
                 <p className="text-center text-slate-500 py-8 border border-dashed border-slate-700 rounded-xl">No messages yet. Be the first to post!</p>
               ) : (
                 messages.map(msg => (
-                  <div key={msg._id} className="bg-slate-800/80 p-5 rounded-xl border border-slate-700 shadow-md">
-                    <div className="flex justify-between items-start mb-3">
+                  <div key={msg._id} className="bg-slate-800/80 p-5 rounded-xl border border-slate-700 shadow-md relative group">
+                    
+                    {/* NEW: Conditional Trash Icon for the logged-in user */}
+                    {msg.user === userName && (
+                      <button onClick={() => handleDeleteMessage(msg._id)} className="absolute top-4 right-4 text-slate-500 hover:text-red-400 bg-slate-900 hover:bg-red-500/10 p-1.5 rounded-md transition-all opacity-0 group-hover:opacity-100" title="Delete message">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 6h18"></path><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"></path><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"></path></svg>
+                      </button>
+                    )}
+
+                    <div className="flex justify-between items-start mb-3 pr-8">
                       <div className="flex items-center gap-3">
                         <div className="h-10 w-10 bg-emerald-900 text-emerald-400 rounded-full flex items-center justify-center font-bold text-lg border border-emerald-700">
                           {msg.user ? msg.user.charAt(0).toUpperCase() : '?'}
