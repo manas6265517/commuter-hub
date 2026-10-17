@@ -1,3 +1,4 @@
+import toast, { Toaster } from 'react-hot-toast';
 import { useState, useEffect } from 'react';
 
 function App() {
@@ -29,20 +30,25 @@ function App() {
       if (data.token) {
         localStorage.setItem('token', data.token);
         setToken(data.token);
+        toast.success('Successfully logged in!');
       } else if (data.message === 'User created successfully') {
         setIsLoginView(true); // Switch to login after signup
-        alert('Signup successful! Please log in.');
+        toast.success('Signup successful! Please log in.');
       } else {
-        alert(data.message); // Show errors like "Invalid credentials"
+        toast.error(data.message || 'Authentication failed.'); 
       }
     })
-    .catch(err => console.error("Auth error:", err));
+    .catch(err => {
+      console.error("Auth error:", err);
+      toast.error('Server error. Please try again.');
+    });
   };
 
   const handleLogout = () => {
     localStorage.removeItem('token');
     setToken('');
     setTrips([]);
+    toast.success('Logged out successfully!');
   };
 
   // --- TRIP FUNCTIONS ---
@@ -69,18 +75,25 @@ function App() {
     .then(() => {
       fetchTrips(); 
       setFormData({ ...formData, travelDate: '' }); 
-    });
+      toast.success('Trip logged successfully!');
+    })
+    .catch(() => toast.error('Failed to log trip.'));
   };
 
   const handleDelete = (id) => {
     fetch(`https://commuter-hub.onrender.com/api/trips/${id}`, { method: 'DELETE' })
-    .then(() => fetchTrips());
+    .then(() => {
+      fetchTrips();
+      toast.success('Trip deleted!');
+    })
+    .catch(() => toast.error('Failed to delete trip.'));
   };
 
   // --- RENDER LOGIN/SIGNUP SCREEN ---
   if (!token) {
     return (
       <div className="min-h-screen bg-slate-900 flex items-center justify-center p-6 font-sans">
+        <Toaster position="top-center"/>
         <div className="bg-slate-800 p-8 rounded-2xl shadow-xl border border-slate-700 w-full max-w-md">
           <h1 className="text-3xl font-extrabold text-center text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-emerald-400 mb-8">
             Commuter Hub 🚆
@@ -112,6 +125,7 @@ function App() {
   // --- RENDER MAIN DASHBOARD ---
   return (
     <div className="min-h-screen bg-slate-900 text-slate-100 p-6 md:p-12 font-sans">
+      <Toaster position="top-center" />
       <div className="max-w-4xl mx-auto">
         <div className="relative flex justify-center items-center mb-10 mt-4">
           <h1 className="text-3xl md:text-5xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-emerald-400 tracking-tight">
