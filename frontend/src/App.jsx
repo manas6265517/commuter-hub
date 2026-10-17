@@ -27,36 +27,35 @@ function App() {
   const [messageForm, setMessageForm] = useState({ text: '', route: '' });
 
   // Train Status State
+  // --- TRAIN STATUS (LIVE SCRAPER) ---
   const [trainStatusLoading, setTrainStatusLoading] = useState(false);
-  const [trainStatuses, setTrainStatuses] = useState([
-    { train: 'Vande Bharat Express', route: 'Raigarh → Raipur', status: 'On Time', delay: '0 mins', lastChecked: 'Just now' },
-    { train: 'Janshatabdi Express', route: 'Raipur → Raigarh', status: 'Delayed', delay: '15 mins', lastChecked: '5 mins ago' },
-    { train: 'Rajdhani Express', route: 'Raipur → Nagpur', status: 'Delayed', delay: '10 mins', lastChecked: '3 mins ago' },
-    { train: 'Duranto Express', route: 'CSMT → Howrah', status: 'On Time', delay: '0 mins', lastChecked: '10 mins ago' },
-    { train: 'Vivek Express', route: 'Dibrugarh → Kanyakumari', status: 'On Time', delay: '0 mins', lastChecked: 'Just now' },
-    { train: 'Humsafar Express', route: 'Prayagraj → New Delhi', status: 'On Time', delay: '0 mins', lastChecked: '10 mins ago' }
-  ]);
+  const [trainStatuses, setTrainStatuses] = useState([]);
 
   const handleRefreshStatus = () => {
     setTrainStatusLoading(true);
-    setTimeout(() => {
-      setTrainStatuses(prev => prev.map(t => {
-        // Roll the dice: 20% chance to be delayed
-        const isDelayed = Math.random() > 0.8; 
-        // If delayed, pick a random delay between 5 and 50 minutes
-        const randomDelay = Math.floor(Math.random() * 45) + 5; 
-        
-        return {
-          ...t,
-          lastChecked: 'Just now',
-          status: isDelayed ? 'Delayed' : 'On Time',
-          delay: isDelayed ? `${randomDelay} mins` : '0 mins' // Reset delay if on time!
-        };
-      }));
-      setTrainStatusLoading(false);
-      toast.success('Live train statuses updated!');
-    }, 1000);
+    fetch('https://commuter-hub.onrender.com/api/status')
+      .then(res => {
+        if (!res.ok) throw new Error('Failed to fetch live status');
+        return res.json();
+      })
+      .then(data => {
+        setTrainStatuses(data);
+        setTrainStatusLoading(false);
+        toast.success('Live train data fetched!');
+      })
+      .catch(err => {
+        console.error("Scraper error:", err);
+        setTrainStatusLoading(false);
+        toast.error('Failed to connect to scraper.');
+      });
   };
+
+  // Auto-fetch the statuses the first time the user clicks the tab
+  useEffect(() => {
+    if (activeTab === 'status' && trainStatuses.length === 0) {
+      handleRefreshStatus();
+    }
+  }, [activeTab]);
 
   // --- AUTHENTICATION FUNCTIONS ---
   const handleAuthChange = (e) => setAuthForm({ ...authForm, [e.target.name]: e.target.value });
