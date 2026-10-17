@@ -29,9 +29,12 @@ function App() {
   // Train Status State
   const [trainStatusLoading, setTrainStatusLoading] = useState(false);
   const [trainStatuses, setTrainStatuses] = useState([
-    { train: 'Janshatabdi Express', route: 'Raigarh → Raipur', status: 'On Time', delay: '0 mins', lastChecked: 'Just now' },
+    { train: 'Vande Bharat Express', route: 'Raigarh → Raipur', status: 'On Time', delay: '0 mins', lastChecked: 'Just now' },
     { train: 'Janshatabdi Express', route: 'Raipur → Raigarh', status: 'Delayed', delay: '15 mins', lastChecked: '5 mins ago' },
-    { train: 'Janshatabdi Express', route: 'Raigarh → Bilaspur', status: 'On Time', delay: '0 mins', lastChecked: '10 mins ago' }
+    { train: 'Rajdhani Express', route: 'Raipur → Nagpur', status: 'Delayed', delay: '10 mins', lastChecked: '3 mins ago' },
+    { train: 'Duranto Express', route: 'CSMT → Howrah', status: 'On Time', delay: '0 mins', lastChecked: '10 mins ago' },
+    { train: 'Vivek Express', route: 'Dibrugarh → Kanyakumari', status: 'On Time', delay: '0 mins', lastChecked: 'Just now' },
+    { train: 'Humsafar Express', route: 'Prayagraj → New Delhi', status: 'On Time', delay: '0 mins', lastChecked: '10 mins ago' }
   ]);
 
   const handleRefreshStatus = () => {
