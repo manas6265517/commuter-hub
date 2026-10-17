@@ -119,6 +119,39 @@ function App() {
     .catch(() => toast.error('Failed to update trip.'));
   };
 
+  const handleExportCSV = () => {
+    if (filteredTrips.length === 0) {
+      toast.error("No trips to export!");
+      return;
+    }
+
+    // 1. Create CSV Headers
+    const headers = ['Date', 'Start Station', 'End Station', 'Train Name', 'Ticket Cost (INR)'];
+
+    // 2. Map the data into CSV rows
+    const csvRows = filteredTrips.map(trip => {
+      const date = new Date(trip.travelDate).toLocaleDateString();
+      // Wrap strings in quotes to handle any accidental commas in names
+      return `"${date}","${trip.startStation}","${trip.endStation}","${trip.trainName}","${trip.ticketCost}"`;
+    });
+
+    // 3. Combine headers and rows
+    const csvContent = [headers.join(','), ...csvRows].join('\n');
+
+    // 4. Create a Blob and trigger the download
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.setAttribute('download', 'Commuter_Hub_Expense_Report.csv');
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+    
+    toast.success('Expense report downloaded!');
+  };
+
   // --- HELPER FUNCTIONS ---
   const handleQuickFill = (start, end, train, cost) => {
     setFormData({
@@ -302,18 +335,32 @@ function App() {
 
             <div className="flex flex-col md:flex-row justify-between items-center mb-6 border-b border-slate-700 pb-4">
               <h2 className="text-3xl font-bold text-slate-200 mb-4 md:mb-0">My Travel History</h2>
-              <div className="relative w-full md:w-64">
-                <input 
-                  type="text" 
-                  placeholder="Search trips..." 
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="w-full bg-slate-800 border border-slate-600 rounded-lg py-2 pl-10 pr-4 text-white focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
-                />
-                <svg className="absolute left-3 top-2.5 h-4 w-4 text-slate-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <circle cx="11" cy="11" r="8"></circle>
-                  <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
-                </svg>
+              
+              <div className="flex gap-3 w-full md:w-auto">
+                {/* Search Bar */}
+                <div className="relative w-full md:w-64">
+                  <input 
+                    type="text" 
+                    placeholder="Search trips..." 
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    className="w-full bg-slate-800 border border-slate-600 rounded-lg py-2 pl-10 pr-4 text-white focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                  />
+                  <svg className="absolute left-3 top-2.5 h-4 w-4 text-slate-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <circle cx="11" cy="11" r="8"></circle>
+                    <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+                  </svg>
+                </div>
+                
+                {/* Export Button */}
+                <button 
+                  onClick={handleExportCSV} 
+                  className="bg-emerald-600 hover:bg-emerald-500 text-white px-4 py-2 rounded-lg transition-all text-sm font-semibold shadow-md whitespace-nowrap flex items-center gap-2"
+                  title="Download as CSV"
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+                  Export
+                </button>
               </div>
             </div>
             
