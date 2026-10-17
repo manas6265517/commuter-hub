@@ -5,7 +5,8 @@ const cors = require('cors');
 
 // Import your route files
 const tripRoutes = require('./routes/tripRoutes');
-const authRoutes = require('./routes/authRoutes'); // <-- NEW: Import auth routes
+const authRoutes = require('./routes/authRoutes'); 
+const messageRoutes = require('./routes/messageRoutes'); // <-- NEW: Import message routes
 
 const app = express();
 
@@ -20,7 +21,8 @@ mongoose.connect(process.env.MONGO_URI)
 
 // Use the routes
 app.use('/api/trips', tripRoutes);
-app.use('/api/auth', authRoutes); // <-- NEW: Connect auth routes to the /api/auth path
+app.use('/api/auth', authRoutes); 
+app.use('/api/messages', messageRoutes); // <-- NEW: Connect message routes to the /api/messages path
 
 // Start server
 const PORT = process.env.PORT || 5000;
