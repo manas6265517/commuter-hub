@@ -436,6 +436,23 @@ function App() {
                 Commuter Feed
               </h2>
               <p className="text-slate-400 text-sm mb-6">Coordinate shared rides or share travel updates with others.</p>
+
+              {/* Preset Route Chips */}
+              <div className="mb-4">
+                <p className="text-slate-400 text-xs uppercase tracking-wider mb-2 font-semibold">Quick Select Route:</p>
+                <div className="flex flex-wrap gap-2">
+                  {['Raigarh to Raipur', 'Raipur to Raigarh', 'Raigarh to Bhatapara'].map((presetRoute, idx) => (
+                    <button
+                      key={idx}
+                      type="button"
+                      onClick={() => setMessageForm({ ...messageForm, route: presetRoute })}
+                      className="bg-slate-900 hover:bg-emerald-600/20 border border-slate-700 hover:border-emerald-500 text-slate-300 text-xs px-3 py-1.5 rounded-lg transition-all"
+                    >
+                      {presetRoute}
+                    </button>
+                  ))}
+                </div>
+              </div>
               
               <form onSubmit={handleMessageSubmit} className="space-y-4">
                 <input 
