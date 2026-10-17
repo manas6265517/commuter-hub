@@ -40,11 +40,19 @@ function App() {
   const handleRefreshStatus = () => {
     setTrainStatusLoading(true);
     setTimeout(() => {
-      setTrainStatuses(prev => prev.map(t => ({
-        ...t,
-        lastChecked: 'Just now',
-        status: Math.random() > 0.8 ? 'Delayed' : 'On Time'
-      })));
+      setTrainStatuses(prev => prev.map(t => {
+        // Roll the dice: 20% chance to be delayed
+        const isDelayed = Math.random() > 0.8; 
+        // If delayed, pick a random delay between 5 and 50 minutes
+        const randomDelay = Math.floor(Math.random() * 45) + 5; 
+        
+        return {
+          ...t,
+          lastChecked: 'Just now',
+          status: isDelayed ? 'Delayed' : 'On Time',
+          delay: isDelayed ? `${randomDelay} mins` : '0 mins' // Reset delay if on time!
+        };
+      }));
       setTrainStatusLoading(false);
       toast.success('Live train statuses updated!');
     }, 1000);
